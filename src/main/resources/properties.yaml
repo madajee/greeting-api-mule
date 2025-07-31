@@ -1,0 +1,32 @@
+# Default properties for greeting-api-mule application
+# These properties can be overridden at deployment time using Anypoint Runtime Manager
+
+# HTTP Listener Configuration
+http:
+  host: "0.0.0.0"
+  port: "8081"
+  basePath: "/api/v1"
+
+# API Configuration
+api:
+  name: "greeting-api"
+  version: "1.0.0"
+  title: "Greeting API"
+  description: "Backend API example for greeting services"
+
+# Application Configuration
+app:
+  environment: "dev"
+  logLevel: "INFO"
+
+# Response Messages
+messages:
+  hello:
+    default: "Hello stranger!!!"
+    withName: "Hello {name}!!!"
+  goodbye:
+    default: "Goodbye stranger!!!"
+    withName: "Goodbye {name}!!!"
+  patient:
+    default: "Hello patient stranger!!!"
+    withName: "Hello patient {name}!!!"
