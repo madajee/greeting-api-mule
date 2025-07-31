@@ -1,5 +1,195 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd"></mule>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+      xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+                          http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+                          http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- Configuration Properties -->
+    <configuration-properties file="properties.yaml" doc:name="Configuration properties" doc:id="1f3c9761-334f-4491-adf7-7bc7505fe2e3"/>
+
+    <!-- HTTP Listener Configuration -->
+    <http:listener-config name="greeting-api-httpListenerConfig" doc:name="HTTP Listener config" doc:id="493ad3ab-d553-4ea4-b879-f078da8ac008">
+        <http:listener-connection host="${http.host}" port="${http.port}" />
+    </http:listener-config>
+
+    <!-- APIkit Configuration -->
+    <apikit:config name="greeting-api-config" api="api/greeting-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" doc:name="APIkit config" doc:id="a60a1402-9ccc-4847-8162-88010b430769"/>
+
+    <!-- Main API Flow -->
+    <flow name="greeting-api-main" doc:id="33570e74-bb21-4611-b3ec-0f100aa30615">
+        <http:listener config-ref="greeting-api-httpListenerConfig" path="/api/*" doc:name="HTTP Listener" doc:id="55fc8473-9ab6-4bfc-a95e-43669280a3a8"/>
+        <apikit:router config-ref="greeting-api-config" doc:name="APIkit Router" doc:id="178fb0f4-74de-49d8-bfe0-dfe58fd04a76"/>
+        <error-handler ref="greeting-api-apiKitGlobalExceptionMapping" />
+    </flow>
+
+    <!-- API Console Flow -->
+    <flow name="greeting-api-console" doc:id="4546a5dd-0e91-4001-9e19-a90ea4898613">
+        <http:listener config-ref="greeting-api-httpListenerConfig" path="/console/*" doc:name="HTTP Listener" doc:id="8c800438-2478-4297-a90c-e76fc9e165cc"/>
+        <apikit:console config-ref="greeting-api-config" doc:name="APIkit Console" doc:id="b2334214-08f3-425a-b411-85246cc2ad3b"/>
+        <error-handler ref="greeting-api-apiKitGlobalExceptionMapping" />
+    </flow>
+
+    <!-- Hello Endpoint Flow -->
+    <flow name="get:\hello:greeting-api-config" doc:id="175e0a63-ba6b-4187-a51d-928f67a60a9b">
+        <logger level="INFO" doc:name="Logger" doc:id="53a89841-be20-4c66-a164-a2e329a044d4" message="Processing hello request with name: #[attributes.queryParams.name default 'none']"/>
+        <ee:transform doc:name="Transform Message" doc:id="5ed75924-da41-45a6-a161-02816cb222b4">
+            <ee:message>
+                <ee:set-payload resource="dwl/hello-response.dwl" />
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="8c8038cc-2b40-4193-907e-1a60805bbb48" message="Hello response: #[payload]"/>
+    </flow>
+
+    <!-- Goodbye Endpoint Flow -->
+    <flow name="get:\goodbye:greeting-api-config" doc:id="4f3ccfe2-df41-4c54-9b4c-f36e179e41c7">
+        <logger level="INFO" doc:name="Logger" doc:id="7c82f7c9-2c38-43d4-b891-e12838102f2a" message="Processing goodbye request"/>
+        <ee:transform doc:name="Transform Message" doc:id="25f4d3bd-ba62-48e1-8f2e-dd5464a74b92">
+            <ee:message>
+                <ee:set-payload resource="dwl/goodbye-response.dwl" />
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="96c1b2d9-8ddc-4ea6-94fd-c6fe476611c1" message="Goodbye response: #[payload]"/>
+    </flow>
+
+    <!-- Patients Endpoint Flow -->
+    <flow name="get:\patients:greeting-api-config" doc:id="3788b184-a4ef-4a66-a5f7-cf2ccdf4d97d">
+        <logger level="INFO" doc:name="Logger" doc:id="66f3c61f-6cf5-46f9-904b-abba28ee8b79" message="Processing patients request with name: #[attributes.queryParams.name default 'none']"/>
+        <ee:transform doc:name="Transform Message" doc:id="05afa967-fd78-45a9-a94f-2c23534dd56e">
+            <ee:message>
+                <ee:set-payload resource="dwl/patient-response.dwl" />
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="e4b07323-700b-4f61-8d44-27fa06e5ea24" message="Patients response: #[payload]"/>
+    </flow>
+
+    <!-- Global Exception Mapping -->
+    <error-handler name="greeting-api-apiKitGlobalExceptionMapping" doc:id="007bd74d-405d-4d6c-a795-3b0c77085d10">
+        <on-error-propagate type="APIKIT:BAD_REQUEST" doc:name="On Error Propagate" doc:id="3d6a8713-67bb-40e8-9708-f0834cfe8491">
+            <logger level="ERROR" doc:name="Logger" doc:id="3f45d6fc-93fc-4b73-bd8d-be1f79c34628" message="Bad Request: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="72c9713d-44ff-48b2-ae60-f2d7e5fb04ee">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Bad request",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 400
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="400" doc:name="Set Variable" doc:id="0f9ceba3-e045-4b70-b508-074576c5d261" variableName="httpStatus"/>
+        </on-error-propagate>
+        <on-error-propagate type="APIKIT:NOT_FOUND" doc:name="On Error Propagate" doc:id="bb4f49b5-1469-493b-a1a4-f055034742e9">
+            <logger level="ERROR" doc:name="Logger" doc:id="22b4e1d5-50ac-432c-8d1a-ac74a48dded0" message="Not Found: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="bc94d3a1-595a-4f0a-9ea4-5afbe8902a78">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Resource not found",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 404
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="404" doc:name="Set Variable" doc:id="a457e388-292f-4f72-bf0e-c01a139c86ee" variableName="httpStatus"/>
+        </on-error-propagate>
+        <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED" doc:name="On Error Propagate" doc:id="41ba040f-3260-4c53-9b73-d6ec3da159c8">
+            <logger level="ERROR" doc:name="Logger" doc:id="e99712f3-74e4-41e7-a95c-8c0dd5f3610d" message="Method Not Allowed: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="40b17e8b-be8b-4cfb-9ad7-b8bdec63c664">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Method not allowed",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 405
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="405" doc:name="Set Variable" doc:id="f4a8d197-cfbc-409f-a165-89222e12f8ea" variableName="httpStatus"/>
+        </on-error-propagate>
+        <on-error-propagate type="APIKIT:NOT_ACCEPTABLE" doc:name="On Error Propagate" doc:id="03f73831-5457-430b-b05f-bc00fe81dcad">
+            <logger level="ERROR" doc:name="Logger" doc:id="91fa264e-c44f-4de4-af4e-fb6f2f526d4c" message="Not Acceptable: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="62484c6b-9600-4e50-8897-b778bca127fd">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Not Acceptable",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 406
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="406" doc:name="Set Variable" doc:id="bad2d45a-02ea-4f0e-b26c-50d68c6f56fa" variableName="httpStatus"/>
+        </on-error-propagate>
+        <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE" doc:name="On Error Propagate" doc:id="43d532e8-a88c-433c-96c6-b3ab48b00933">
+            <logger level="ERROR" doc:name="Logger" doc:id="ba0e204b-6689-4300-9c41-12da21c2743d" message="Unsupported Media Type: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="e701693a-c5ec-43d2-a293-28a29cb52439">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Unsupported Media Type",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 415
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="415" doc:name="Set Variable" doc:id="2e46a71b-5ed8-4ef9-9fca-6ede80674f1b" variableName="httpStatus"/>
+        </on-error-propagate>
+        <on-error-propagate type="APIKIT:NOT_IMPLEMENTED" doc:name="On Error Propagate" doc:id="0951fd53-034a-412a-b16a-92b3906b0235">
+            <logger level="ERROR" doc:name="Logger" doc:id="23f9066b-6bc8-41cb-b00b-8c11d9e73bb7" message="Not Implemented: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="3dfbcce6-4e00-4583-9ed1-37e130650caf">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Not Implemented",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 501
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="501" doc:name="Set Variable" doc:id="271c8b3b-4988-4504-a63d-8dd85e71dbd2" variableName="httpStatus"/>
+        </on-error-propagate>
+        <on-error-propagate type="ANY" doc:name="On Error Propagate" doc:id="3f48efb0-5142-49f2-8545-42c9c23ec273">
+            <logger level="ERROR" doc:name="Logger" doc:id="22cb2139-b295-49a6-a7ec-edbef140a23d" message="An unexpected error occurred: #[error.description]"/>
+            <ee:transform doc:name="Transform Message" doc:id="25fc0124-122f-4d72-9be5-13ceff033c2a">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "message": "Internal Server Error",
+    "details": error.description,
+    "timestamp": now(),
+    "status": 500
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <set-variable value="500" doc:name="Set Variable" doc:id="e6c352b7-2121-4501-a470-f9b0d4750dc0" variableName="httpStatus"/>
+        </on-error-propagate>
+    </error-handler>
+
+</mule>
